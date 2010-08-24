@@ -1,0 +1,3 @@
+version=3
+https://launchpad.net/ibus.el \
+http://launchpad.net/ibus.el/[\d.]+/[\d.]+/\+download/ibus-el-([\d.]+)\.tar\.gz

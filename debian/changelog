@@ -1,8 +1,8 @@
-ibus-el (0.2.0) lucid; urgency=low
+ibus-el (0.2.0-1) unstable; urgency=low
 
-  * New release
+  * initial release (closes: #594186)
 
- -- IRIE Shinsuke <irieshinsuke@yahoo.co.jp>  Thu, 19 Aug 2010 09:25:24 +0900
+ -- LI Daobing <lidaobing@debian.org>  Tue, 24 Aug 2010 21:17:20 +0800
 
 ibus-el (0.1.1) lucid; urgency=low
 

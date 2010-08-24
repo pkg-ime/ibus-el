@@ -1,11 +1,13 @@
 Source: ibus-el
 Section: lisp
-Priority: extra
-Maintainer: IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+Priority: optional
+Maintainer: IME Packaging Team <pkg-ime-devel@lists.alioth.debian.org>
+Uploaders: LI Daobing <lidaobing@debian.org>
 Build-Depends: debhelper (>= 7)
-Standards-Version: 3.8.4
-Homepage: http://www11.atwiki.jp/s-irie/pages/21.html
-Bugs: https://bugs.launchpad.net/ibus.el
+Standards-Version: 3.9.1
+Homepage: https://launchpad.net/ibus.el
+Vcs-Bzr: lp:~pkg-ime/ibus.el/debian-ibus-el
+Vcs-Browser: https://code.launchpad.net/~pkg-ime/ibus.el/debian-ibus-el
 
 Package: ibus-el
 Architecture: all
@@ -23,5 +25,3 @@ Description: IBus client for GNU Emacs
  individually kept for each buffer, and prefix-keys such as C-x
  and C-c can be used even if IBus is active. So you can input
  various languages fast and comfortably by using it.
- .
- This program is *not* a part of IBus.
