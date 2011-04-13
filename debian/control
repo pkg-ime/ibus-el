@@ -2,17 +2,18 @@ Source: ibus-el
 Section: lisp
 Priority: optional
 Maintainer: IME Packaging Team <pkg-ime-devel@lists.alioth.debian.org>
-Uploaders: LI Daobing <lidaobing@debian.org>
+Uploaders: LI Daobing <lidaobing@debian.org>, Asias He <asias.hejun@gmail.com>
 Build-Depends: debhelper (>= 7)
 Standards-Version: 3.9.1
 Homepage: https://launchpad.net/ibus.el
-Vcs-Bzr: lp:~pkg-ime/ibus.el/debian-ibus-el
-Vcs-Browser: https://code.launchpad.net/~pkg-ime/ibus.el/debian-ibus-el
+Vcs-Git: git://git.debian.org/git/pkg-ime/ibus-el.git
+Vcs-Browser: http://git.debian.org/?p=pkg-ime/ibus-el.git
+DM-Upload-Allowed: yes
 
 Package: ibus-el
 Architecture: all
-Depends: ${misc:Depends}, emacs23 | emacs22 | emacs-snapshot,
-	 python (>= 2.5), ibus (>= 1.2), python-xlib
+Depends: ${misc:Depends}, emacs23 | emacs22,
+	 python (>= 2.5), ibus (>= 1.3), python-xlib
 Suggests: ibus-gtk, ibus-qt4
 Description: IBus client for GNU Emacs
  IBus is an Intelligent Input Bus. It is a new input framework

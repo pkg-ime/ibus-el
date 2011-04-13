@@ -1,3 +1,12 @@
+ibus-el (0.2.1-1) unstable; urgency=low
+
+  * New release 
+  * Fix "new upstream version available" (Closes: #622641)
+  * Set Vcs to git.debian.org
+  * Set DMUA to yes
+
+ -- Asias He <asias.hejun@gmail.com>  Thu, 14 Apr 2011 08:32:11 +0800
+
 ibus-el (0.2.0-1) unstable; urgency=low
 
   * initial release (closes: #594186)
