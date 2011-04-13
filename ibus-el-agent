@@ -6,7 +6,7 @@
 
 # Author: S. Irie
 # Maintainer: S. Irie
-# Version: 0.1.1.12
+# Version: 0.2.1
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,6 +39,19 @@
 
 # ChangeLog:
 
+# 2010-11-03  S. Irie
+#         * Version 0.2.1
+#         * Bug fixes
+#
+# 2010-08-19  S. Irie
+#         * Version 0.2.0
+#         * Added Frame class in order to:
+#           - observe input focus
+#           - obtain frame absolute coordinates
+#         * Added -q option to quit if ibus-daemon is not running
+#         * Fixed shift modifier bug
+#         * Bug fix
+#
 # 2010-06-11  S. Irie
 #         * Version 0.1.1
 #         * Changed to reduce inter-process communication
@@ -109,13 +122,13 @@ class Frame(object):
             try:
                 tree = focus.query_tree()
                 parent = tree.parent
-                if parent == tree.root:
+                if tree.root in (focus, parent):
                     print form % focus.id
                 else:
                     print form % parent.id
                 self.focus = focus
             except:
-                pass
+                pass # This probably makes aborting ibus-mode.
         return True
 
     def stop_focus_observation(self):
@@ -142,7 +155,13 @@ class Frame(object):
             self.root_window = self.window.get_geometry().root
             self.window_id = window_id
 
-display = Xlib.display.Display()
+try:
+    display = Xlib.display.Display()
+except:
+    import time
+    time.sleep(0.5)
+    display = Xlib.display.Display()
+
 frame = Frame(display)
 
 ########################################################################
