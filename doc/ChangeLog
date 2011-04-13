@@ -1,0 +1,69 @@
+2010-08-19  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.2.0
+	* Added `i18n' to parent groups of `ibus'
+	* Added option `ibus-agent-start-ibus-daemon'
+	* Changed not to start ibus-daemon automatically by default (RH bug #620349)
+	* Changed not to use xwininfo
+	* Changed not to ask X root window the property "_NET_ACTIVE_WINDOW"
+	* Modified so that Alt-Meta translation works correctly even when using
+	keyboards of different layouts in multi-displays environment
+	* Rewrote docstrings of custom variables
+	* Deleted internal option `ibus-meta-key-exists'
+	* Fixed bug: Shift modifier is ignored when keyval is non-alphabetical
+	ASCII character
+	* Fixed bug: Using `ibus-toggle' command during isearch-mode clears
+	minibuffer
+	* Fixed bug: X keymap is changed incorrectly if C-\ is bound to
+	`ibus-toggle' in `isearch-mode-map' and `ibus-use-kana-onbiki-key'
+	is non-nil
+	* Fixed bug: Keymaps are not enabled for about 0.3 second maximum after
+	focused in from the other applications
+	* Fixed bug: Alt + Romaji is ignored when actual meta key exists
+	* Fixed bug: forward_key_event incorrectly translates Romaji key into
+	Hiragana_Katakana key when actual meta key exists
+	* Fixed problem: ibus-el-agent might cause IndexError (list index out of
+	range) in multi-displays environment
+	* Fixed bug: post-command-hook might be executed after exiting ibus-mode
+	abnormally
+	* Fixed bug: `english-dvorak' input method doesn't work correctly together
+	with ibus-mode in isearch-mode
+	* Fixed bug: Incorrect row height is used after turning text-scale-mode off
+	when header line exists
+	* Fixed bug: An error "<ibus-resume-preedit> is undefined" sometimes occurs
+	when using IBus with isearch-mode
+	* Fixed bug: Preediting text is occasionally and incorrectly inserted to the
+	current buffer when using IBus with isearch-mode
+2010-06-11  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.1.1
+	* Added option `ibus-prediction-window-position'
+	* Added option `ibus-agent-buffering-time'
+	* Changed so that key release events don't have to be sent to the agent
+	* Changed not to send cursor location if it's the same as previous one
+	* Changed ibus-el-agent not to send unnecessary `commit-text' signals
+	to Emacs when preedit text is empty
+	* Changed not to use unnecessary event `ibus-dummy-event'
+	* Modified not to send cursor location to agent just after text is committed
+	* Modified to work correctly when setting "Hold" to "Behavior on Focus Out"
+	in ibus-anthy's preferences
+	* Modified to redraw preedit text when switching frames showing same buffer
+	* Fixed bug: Candidate window is shown at incorrect position when using
+	text-scale-mode with header line shown
+	* Fixed bug: post-command-hook becomes extremely slow when using many frames
+	* Fixed bug: ibus-mode is unexpectedly exited when used with IBus 1.3
+	* Fixed bug: Agent might fail to launch IBus daemon
+2010-05-29  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.1.0
+	* Initial release
+	* Added support for multi-displays environment
+	* Added support for isearch-mode
+	* Added support for INHERIT-INPUT-METHOD
+	* Added support for Japanese kana typing method
+	* Added support for Japanese thumb shift typing method
+	* Added debian directory
+	* Fixed a lot of bugs
+2010-05-09  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.0.2
+	* Imported many functions from scim-bridge.el
+2010-04-12  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.0.1
+	* Initial experimental version

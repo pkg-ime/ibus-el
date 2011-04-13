@@ -1,0 +1,8 @@
+ibus-el for Debian
+------------------
+
+This is Debian package of ibus.el .
+Since this program is *not* a part of IBus, Emacs Lisp file isn't put in
+/usr/share/emacs/site-lisp/ibus, but in /usr/share/emacs/site-lisp/ibus-el .
+
+ -- IRIE Shinsuke <irieshinsuke@yahoo.co.jp>  Thu, 27 May 2010 21:24:27 +0900
