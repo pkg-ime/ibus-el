@@ -1,3 +1,22 @@
+2010-11-03  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.2.1
+	* Added support for vim-mode
+	* Added libexec directories to search paths for `ibus-agent-file-name'
+	* Changed to execute fallback command in latin mode to simulate original
+	behavior for the key event (IBus issue #1058)
+	* Modified custom types of `ibus-kana-onbiki-x-keysym' and
+	`ibus-kana-onbiki-key-symbol' so that they can be disabled
+	* Modified to reset cursor color in consideration of color themes
+	* Modified not to unnecessarily set cursor color for non-X frame
+	* Modified not to unnecessarily check current buffer while command is running
+	* Fixed bug: Keymap might not be updated when switching input focus from
+	non-X frame to X frame
+	* Fixed bug: ibus-mode is abnormally exited when automatically turning off
+	monitor for power saving
+	* Fixed bug: If starting emacs-w3m in one of multiple frames, ibus-mode's
+	keymaps are incorrectly disabled in one of the other buffers
+	* Fixed problem (maybe): ibus-el-agent crashes if failing to connect to
+	X display when ibus-mode starts or display is changed (RH bug #627358)
 2010-08-19  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
 	* Version0.2.0
 	* Added `i18n' to parent groups of `ibus'

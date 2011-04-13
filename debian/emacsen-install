@@ -7,6 +7,7 @@
 
 FLAVOR=$1
 PACKAGE=ibus-el
+PKGSNAME=ibus
 
 case $FLAVOR in
     emacs|emacs21|emacs20|emacs19|mule2|*xemacs*)
@@ -28,19 +29,21 @@ echo install/${PACKAGE}: Handling install for emacsen flavor ${FLAVOR}
 #FLAGS="${SITEFLAG} -q -batch -l path.el -f batch-byte-compile"
 FLAGS="-no-site-file -q -batch -l path.el -f batch-byte-compile"
 
-ELDIR=/usr/share/emacs/site-lisp/${PACKAGE}
-ELCDIR=/usr/share/${FLAVOR}/site-lisp/${PACKAGE}
+ELDIR=/usr/share/emacs/site-lisp/${PKGSNAME}
+ELCDIR=/usr/share/${FLAVOR}/site-lisp/${PKGSNAME}
 
 install -m 755 -d ${ELCDIR}
 cd ${ELDIR}
 FILES=`echo *.el`
-cp ${FILES} ${ELCDIR}
 cd ${ELCDIR}
+for i in ${FILES}; do
+    ln -sf ${ELDIR}/$i .
+done
 
 cat << EOF > path.el
 (setq load-path (cons "." load-path) byte-compile-warnings nil)
 EOF
 ${FLAVOR} ${FLAGS} ${FILES}
-rm -f *.el path.el
+rm -f path.el
 
 exit 0

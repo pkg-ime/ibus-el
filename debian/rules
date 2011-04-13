@@ -48,7 +48,7 @@ install: build
 	dh_prep  
 	dh_installdirs
 
-	install -m 644 *.el $(CURDIR)/debian/ibus-el/usr/share/emacs/site-lisp/ibus-el
+	install -m 644 *.el $(CURDIR)/debian/ibus-el/usr/share/emacs/site-lisp/ibus
 	install -m 755 ibus-el-agent $(CURDIR)/debian/ibus-el/usr/lib/ibus-el
 
 # Build architecture-independent files here.

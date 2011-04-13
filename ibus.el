@@ -8,7 +8,7 @@
 ;; Maintainer: S. Irie
 ;; Keywords: Input Method, i18n
 
-(defconst ibus-mode-version "0.2.0")
+(defconst ibus-mode-version "0.2.1")
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -93,6 +93,11 @@
 ;;
 
 ;;; History:
+;; 2010-11-03  S. Irie
+;;         * Version 0.2.1
+;;         * Add support for vim-mode
+;;         * Bug fixes
+;;
 ;; 2010-08-19  S. Irie
 ;;         * Version 0.2.0
 ;;         * Add `i18n' to parent groups of `ibus'
@@ -341,7 +346,7 @@ The unexpected event is, for example, string insertion by mouse clicking."
 
 (defcustom ibus-cursor-color
   nil
-  "Specify cursor color(s) corresponding to ibus' status.
+  "Specify cursor color(s) corresponding to IBus' status.
 If the value is a string, specify the cursor color applied when IBus is
 on. If a cons cell, its car and cdr are the cursor colors which indicate
 that IBus is on and off, respectively. If a list, the first, second and
@@ -437,11 +442,21 @@ the coordinates to ibus-daemon."
   (let ((dir-list `(,(file-name-directory load-file-name)
 		    "~/bin/"
 		    "/usr/local/bin/"
+		    "/usr/local/libexec/"
+		    "/usr/local/libexec/ibus-el/"
+		    "/usr/local/libexec/emacs-ibus/"
 		    "/usr/local/lib/ibus-el/"
+		    "/usr/local/lib/emacs-ibus/"
 		    "/usr/local/share/ibus-el/"
+		    "/usr/local/share/emacs-ibus/"
 		    "/usr/bin/"
+		    "/usr/libexec/"
+		    "/usr/libexec/ibus-el/"
+		    "/usr/libexec/emacs-ibus/"
 		    "/usr/lib/ibus-el/"
-		    "/usr/share/ibus-el/"))
+		    "/usr/lib/emacs-ibus/"
+		    "/usr/share/ibus-el/"
+		    "/usr/share/emacs-ibus/"))
 	file-name)
     (while dir-list
       (setq file-name (concat (pop dir-list) "ibus-el-agent"))
@@ -472,10 +487,11 @@ directly as a shell command."
   "String specifying a name of X keysym which is used as a substitute
 of keysym corresponding to Japanese prolonged sound mark (onbiki) key. The
 value nil means don't use the substitutive keysym. ibus-mode modifies X's
-keymap according to this option in order to distinguish backslash key from
-yen-mark key. This option is ineffectual unless using jp-106 keyboard."
+keymap according to this option in order to distinguish yen-mark key from
+backslash key. This option is ineffectual unless using jp-106 keyboard."
   :set 'ibus-customize-key
-  :type 'string
+  :type '(choice (string :tag "keysym name" :value "F24")
+		 (const :tag "none" nil))
   :group 'ibus-expert)
 
 (defcustom ibus-kana-onbiki-key-symbol 'f24
@@ -485,7 +501,8 @@ mark (onbiki) key. The value nil means don't use that key. If setting
 the event corresponding to that keysym. This option is ineffectual
 unless using jp-106 keyboard."
   :set 'ibus-customize-key
-  :type '(choice (symbol)
+  :type '(choice (symbol :tag "symbol" :value 'f24)
+		 (integer :tag "character code (integer)" :value ?|)
 		 (const :tag "none" nil))
   :group 'ibus-expert)
 
@@ -969,7 +986,8 @@ use either \\[customize] or the function `ibus-mode'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ibus-log1 (format-string args)
-  (let ((log-str (apply 'format format-string args)))
+  (let ((log-str (concat (format-time-string "%T ")
+			 (apply 'format format-string args))))
     (with-current-buffer (get-buffer-create ibus-log-buffer)
       (let ((window (get-buffer-window (current-buffer))))
 	(save-selected-window
@@ -996,8 +1014,8 @@ use either \\[customize] or the function `ibus-mode'."
       (ibus-log1 " 4th: %S" (list (nth 3 buffer-undo-list))))))
 
 (defun ibus-message (format-string &rest args)
-  (apply 'message (concat "IBus: " format-string) args)
-  (apply 'ibus-log (concat "message: " format-string) args))
+  (apply 'ibus-log (concat "message: " format-string) args)
+  (apply 'message (concat "IBus: " format-string) args))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Miscellaneous
@@ -1530,7 +1548,7 @@ or restart ibus-mode."
 	(orig-frame (selected-frame)))
 ;#    (ibus-log "set cursor color: %S" color)
     (condition-case err
-	(while (progn
+	(while (save-current-buffer
 		 (unless single-frame
 		   (select-frame (next-frame nil t)))
 		 (when (or (and (eq window-system 'x)
@@ -1539,7 +1557,13 @@ or restart ibus-mode."
 				    ibus-current-buffer))
 			   (not ibus-mode))
 		   (unless color
-		     (setq color (frame-parameter nil 'foreground-color)))
+		     (let ((spec (or (get 'cursor 'customized-face)
+				     (cadr (assq (car custom-enabled-themes)
+						 (get 'cursor 'theme-face))))))
+		       (setq color (if spec
+				       (cadr (memq :background
+						   (face-spec-choose spec)))
+				     (frame-parameter nil 'foreground-color)))))
 		   (if viper
 		       (with-no-warnings
 			 (setq viper-insert-state-cursor-color color)
@@ -1659,6 +1683,16 @@ respectively."
 (defun ibus-focus-changed-cb (window-id)
 ;#  (ibus-log "frame focus changed: %s" window-id)
   (setq ibus-focused-window-id window-id)
+  (unless window-system
+    (let ((frames (frame-list)))
+      (while frames
+	(let* ((frame (pop frames))
+	       (id (frame-parameter frame 'outer-window-id)))
+	  (when (and id (eq (string-to-number id) window-id))
+;#	    (ibus-log "non-X frame => X frame")
+	    (save-current-buffer
+	      (select-frame frame))
+	    (setq frames nil))))))
   (ibus-check-frame-focus))
 
 (defun ibus-change-x-display ()
@@ -1724,7 +1758,8 @@ respectively."
 	  (when ibus-preediting-p
 	    (ibus-remove-preedit)
 	    (ibus-show-preedit))))
-      (unless focus-in
+      (unless (or focus-in
+		  this-command)
 	(ibus-check-current-buffer)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2001,7 +2036,7 @@ respectively."
 	(set-process-coding-system proc 'utf-8 'utf-8)
 	(with-current-buffer (process-buffer proc)
 ;#	  (ibus-log "temp buffer: %S" (current-buffer))
-	  (unless ibus-debug (buffer-disable-undo))
+	  (buffer-disable-undo)
 	  (erase-buffer)
 	  ;; `make-local-hook' is an obsolete function (as of Emacs 21.1)
 ;	  (make-local-hook 'after-change-functions)
@@ -2054,11 +2089,13 @@ respectively."
 	      (sec (and (floatp ibus-agent-timeout) ibus-agent-timeout))
 	      (msec (and (integerp ibus-agent-timeout) ibus-agent-timeout)))
 	  (when (= (point-max) 1)
-	    (accept-process-output ibus-agent-process sec msec t))
+	    (save-current-buffer
+	      (accept-process-output ibus-agent-process sec msec t)))
 	  (when wait
-	    (sleep-for (or (and (floatp ibus-agent-buffering-time)
-				ibus-agent-buffering-time)
-			   (/ ibus-agent-buffering-time 1000.0))))
+	    (save-current-buffer
+	      (sleep-for (or (and (floatp ibus-agent-buffering-time)
+				  ibus-agent-buffering-time)
+			     (/ ibus-agent-buffering-time 1000.0)))))
 	  (goto-char (point-min))
 	  (while (let ((pos (point)))
 		   (condition-case err
@@ -2071,7 +2108,8 @@ respectively."
 			     repl)
 		     (end-of-file
 		      (goto-char pos)
-		      (accept-process-output ibus-agent-process sec msec t))
+		      (save-current-buffer
+			(accept-process-output ibus-agent-process sec msec t)))
 		     (error
 		      nil)))
 	    (beginning-of-line 2))
@@ -2136,6 +2174,7 @@ respectively."
 
 (defun ibus-process-signals (sexplist &optional passive)
   (let (rsexplist
+	focus-changed
 	(need-check (and passive
 			 (null ibus-isearch-minibuffer)
 			 (buffer-live-p ibus-current-buffer)
@@ -2146,7 +2185,7 @@ respectively."
 	     (fun (car-safe sexp)))
 	(cond
 	 ((eq fun 'ibus-focus-changed-cb)
-	  (apply 'run-with-timer 0 nil sexp))
+	  (setq focus-changed sexp))
 	 ((and (symbolp fun)
 	       (fboundp fun))
 	  (push sexp rsexplist)
@@ -2163,6 +2202,8 @@ respectively."
 	 (t
 ;#	  (ibus-log "ignore: %S" sexp)
 	  ))))
+    (if focus-changed
+	(apply 'run-with-timer 0 nil focus-changed))
     (when rsexplist
 ;#      (ibus-log "this-command: %s" this-command)
 ;#      (ibus-log "last-command: %s" last-command)
@@ -2212,7 +2253,13 @@ respectively."
    ((not ibus-string-insertion-failed)
     (ibus-remove-preedit)
     (condition-case err
-	(progn
+	(if (and (not ibus-preediting-p)
+		 (eq this-command 'ibus-handle-event)
+		 (= (length text) 1)
+		 (eq (string-to-char text) last-command-event))
+	    (let ((ibus-last-command-event last-command-event)
+		  ibus-agent-key-event-handled)
+	      (ibus-process-key-event-cb id nil))
 	  (cond
 	   ;; ansi-term
 	   ((and (eq major-mode 'term-mode)
@@ -2226,7 +2273,7 @@ respectively."
 	   ;; Normal commit
 	   (ibus-undo-by-committed-string
 	    (insert-and-inherit text))
-	   ;; Normal commit (Undoing will be performed every 20 characters)
+	   ;; Normal commit (Undoing will be performed every 20 columns)
 	   (t
 	    (ibus-insert-and-modify-undo-list text)))
 	  (setq ibus-last-command 'self-insert-command)
@@ -2500,7 +2547,9 @@ respectively."
   (interactive "*p")
   (unless (eq last-command 'ibus-handle-event)
     (setq ibus-last-command last-command))
-  (ibus-process-key-event last-command-event))
+  (ibus-process-key-event last-command-event)
+  (if ibus-preediting-p
+      (setq this-command 'ibus-handle-event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Manage IMContexts
@@ -2718,7 +2767,8 @@ ENGINE-NAME, if given as a string, specify input method engine."
 	    (if (numberp ibus-imcontext-id)
 		(ibus-check-frame-focus t)))
 	  (ibus-set-keymap-parent)
-	  (ibus-update-cursor-color)))
+	  (unless non-x-p
+	    (ibus-update-cursor-color))))
       (setq ibus-parent-buffer-group nil)
       ;; Disable keymap if buffer is read-only, explicitly disabled, or vi-mode.
       (if (eq (and (or buffer-read-only
@@ -2726,6 +2776,9 @@ ENGINE-NAME, if given as a string, specify input method engine."
 		       (eq major-mode 'vi-mode)
 		       (and (boundp 'vip-current-mode)
 			    (eq vip-current-mode 'vi-mode))
+		       (and (bound-and-true-p vim-mode)
+			    (with-no-warnings
+			      (eq vim:active-mode 'vim:normal-mode)))
 		       (and (boundp 'viper-current-state)
 			    (eq viper-current-state 'vi-state)))
 		   (not (and isearch-mode
