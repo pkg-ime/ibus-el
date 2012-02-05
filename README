@@ -32,7 +32,7 @@ GNU General Public License version 3
 2. Requirements
 ----------------------------------------------------------------------
 
-emacs22 | emacs23 | emacs-snapshot
+emacs (>= 22)
 python (>= 2.5)
 ibus (>= 1.2)
 python-xlib

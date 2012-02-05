@@ -1,3 +1,19 @@
+2011-12-24  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
+	* Version0.3.0
+	* Added support for surrounding text
+	* Added option `ibus-candidate-window-h-offset'
+	* Added option `ibus-prediction-window-h-offset'
+	* Added command `ibus-enable-specified-engine'
+	* Changed to enable setting of ibus-prediction-window-position=0 even in
+	minibuffer if IBus version is 1.3.8 or later
+	* Changed to show underlines even if their thicknesses are zero
+	* Fixed problem: Table created by `table-insert' command might corrupt
+	when preediting aborts
+	* Fixed problem: Preediting may abort when using some engines such as m17n
+	* Fixed problem: Input focus cannot be detected on Ubuntu Unity desktop
+	because get_input_focus() often returns root window incorrectly
+	* Fixed bug: auto-fill-mode doesn't work (LP #784452)
+	* Fixed bug: Input focus cannot be obtained correctly in StumpWM (LP #856358)
 2010-11-03  IRIE Shinsuke <irieshinsuke@yahoo.co.jp>
 	* Version0.2.1
 	* Added support for vim-mode
