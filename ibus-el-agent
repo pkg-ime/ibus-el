@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 # ibus-el-agent --- helper program of IBus client for GNU Emacs
-# Copyright (c) 2010 and onwards, S. Irie
+# Copyright (c) 2010-2011 and onwards, S. Irie
 
 # Author: S. Irie
 # Maintainer: S. Irie
-# Version: 0.2.1
+# Version: 0.3.0
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,6 +39,13 @@
 
 # ChangeLog:
 
+# 2011-12-24  S. Irie
+#         * Version 0.3.0
+#         * Add support for surrounding text
+#         * Implement list_active_engines() for `ibus-enable-specified-engine'
+#         * Improve input focus detection
+#         * Bug fixes
+#
 # 2010-11-03  S. Irie
 #         * Version 0.2.1
 #         * Bug fixes
@@ -82,6 +89,7 @@ from ibus import modifier
 ########################################################################
 
 start_ibus_daemon = True
+use_surrounding_text = False
 
 if __name__ == "__main__":
 
@@ -90,9 +98,15 @@ if __name__ == "__main__":
     parser.add_option("-q", "--quit",
                       action="store_true", dest="quit", default=False,
                       help="quit if ibus-daemon is not running")
+    parser.add_option("-s", "--surrounding-text",
+                      action="store_true", dest="surrounding_text", default=True,
+                      help="enable surrounding text support")
     options, args = parser.parse_args()
     if options.quit:
         start_ibus_daemon = False
+    if options.surrounding_text:
+        use_surrounding_text = True
+        print "Surrounding text support enabled"
 
 ########################################################################
 # Setup Xlib
@@ -100,6 +114,8 @@ if __name__ == "__main__":
 
 try:
     import Xlib.display
+    import Xlib.X
+    import Xlib.Xatom
 except ImportError:
     print "python-xlib library is required"
     exit(1)
@@ -116,19 +132,58 @@ class Frame(object):
         self.focus = None
         self.focus_cb_id = None
 
-    def __update_focus_cb(self, form):
+    def __update_focus_cb(self, form, sync=False):
+        # Check FocusIn/FocusOut events
+        if self.focus:
+            focus_in = None
+            focus_out = None
+            for i in range(display.pending_events()):
+                event = display.next_event()
+                if event.type == Xlib.X.FocusIn:
+                    focus_in = event.window
+                elif event.type == Xlib.X.FocusOut:
+                    focus_out = event.window
+            if focus_in == self.focus:
+                if focus_out != self.focus:
+                    # This is ugly workaround, but necessary to avoid a
+                    # problem that the language bar doesn't appear after
+                    # moving to other workspace in Ubuntu Unity desktop.
+                    # If old version of ibus.el which doesn't define
+                    # `ibus-redo-focus-in-cb' is running on Emacs, the
+                    # following message will just be ignored and take no effect.
+                    print '(ibus-redo-focus-in-cb)'
+                if sync:
+                    print form % focus_in.id
+                return True
+        # Main part
         focus = self.display.get_input_focus().focus
-        if focus != self.focus:
-            try:
-                tree = focus.query_tree()
-                parent = tree.parent
-                if tree.root in (focus, parent):
+        try:
+            # get_input_focus() may return an integer 0 that query_tree()
+            # causes AttributeError when X session is going to logout,
+            # or it might return an bad window when using GNOME Shell.
+            tree = focus.query_tree()
+            # In Ubuntu's Unity desktop, get_input_focus() often returns root
+            # window incorrectly after changing workspace.
+            if focus != tree.root:
+                if not (focus.get_wm_class() or focus.get_wm_name()):
+                    focus = tree.parent
+                if focus != self.focus or sync:
                     print form % focus.id
-                else:
-                    print form % parent.id
-                self.focus = focus
-            except:
-                pass # This probably makes aborting ibus-mode.
+                    focus.change_attributes(event_mask=Xlib.X.FocusChangeMask)
+                    self.focus = focus
+                return True
+        except (AttributeError, Xlib.error.BadWindow):
+            if sync:
+                print form % 0
+            return True
+        # Fallback
+        atom = display.get_atom("_NET_ACTIVE_WINDOW", True)
+        focus_id = tree.root.get_property(atom, Xlib.Xatom.WINDOW, 0, 1).value[0]
+        focus = display.create_resource_object("window", focus_id)
+        if focus != self.focus or sync:
+            print form % focus_id
+            focus.change_attributes(event_mask=Xlib.X.FocusChangeMask)
+            self.focus = focus
         return True
 
     def stop_focus_observation(self):
@@ -139,7 +194,7 @@ class Frame(object):
 
     def start_focus_observation(self, interval):
         self.stop_focus_observation()
-        self.__update_focus_cb("(ibus-start-focus-observation-cb %d)")
+        self.__update_focus_cb("(ibus-start-focus-observation-cb %d)", True)
         self.focus_cb_id = glib.timeout_add(interval, self.__update_focus_cb,
                                             "(ibus-focus-changed-cb %d)")
 
@@ -218,6 +273,7 @@ class IBusELInputContext(ibus.InputContext):
         self.id_no = 0
         self.preediting = False
         self.lookup_table = None
+        self.surrouding_text_received = False
 
         self.connect('commit-text', commit_text_cb)
         self.connect('update-preedit-text', update_preedit_text_cb)
@@ -313,9 +369,11 @@ def cursor_down_lookup_table_cb(ic):
 
 def enabled_cb(ic):
     print '(ibus-status-changed-cb %d "%s")'%(ic.id_no, ic.get_engine().name)
+    ic.surrouding_text_received = False
 
 def disabled_cb(ic):
     print '(ibus-status-changed-cb %d nil)'%ic.id_no
+    ic.surrouding_text_received = False
 
 def forward_key_event_cb(ic, keyval, keycode, modifiers):
     print '(ibus-forward-key-event-cb %d %d %d %s)'% \
@@ -340,7 +398,7 @@ def create_imcontext():
     except ValueError:
         ic.id_no = len(imcontexts)
         imcontexts.append(ic)
-    ic.set_capabilities(int('101001',2))
+    ic.set_capabilities(int('101001' if use_surrounding_text else '001001',2))
     print '(ibus-create-imcontext-cb %d)'%ic.id_no
 
 def destroy_imcontext(id_no):
@@ -355,6 +413,17 @@ def process_key_event(id_no, keyval, modmask, backslash, pressed = None):
         display._update_keymap(display.display.info.min_keycode,
                                (display.display.info.max_keycode
                                 - display.display.info.min_keycode + 1))
+
+    def reply(id_no, handled):
+        print '(ibus-process-key-event-cb %d %s)'%(id_no, lisp_boolean(handled))
+        return False
+
+    ic = imcontexts[id_no]
+    if use_surrounding_text and pressed != False \
+            and ic.needs_surrounding_text() and not ic.surrouding_text_received:
+        print '(ibus-query-surrounding-text-cb %d %d ?\\x%x "%s" "%s")'% \
+            (id_no, keyval, modmask, backslash, pressed)
+        return
 
     if backslash:
         keycode = display.keysym_to_keycode(backslash) - 8
@@ -388,17 +457,17 @@ def process_key_event(id_no, keyval, modmask, backslash, pressed = None):
     if pressed != None:
         if not pressed:
             modmask |= modifier.RELEASE_MASK
-        handled = imcontexts[id_no].process_key_event(keyval, keycode, modmask)
+        handled = ic.process_key_event(keyval, keycode, modmask)
     else:
-        ic = imcontexts[id_no]
         handled_p = ic.process_key_event(keyval, keycode, modmask)
         handled_r = ic.process_key_event(keyval, keycode,
                                          modmask | modifier.RELEASE_MASK)
         handled = handled_p or handled_r
-    print '(ibus-process-key-event-cb %d %s)'%(id_no, lisp_boolean(handled))
+    glib.idle_add(reply, id_no, handled)
 
 def set_cursor_location(id_no, x, y, w, h):
-    imcontexts[id_no].set_cursor_location(frame.left + x, frame.top + y, w, h)
+    imcontexts[id_no].set_cursor_location(max(0, frame.left + x),
+                                          frame.top + y, w, h)
 
 def focus_in(id_no):
     imcontexts[id_no].focus_in()
@@ -424,6 +493,11 @@ def set_engine(id_no, name):
     else:
         enable(id_no)
 
+def set_surrounding_text(id_no, text, cursor_pos, anchor_pos):
+    ic = imcontexts[id_no]
+    ic.set_surrounding_text(text.decode("utf-8"), cursor_pos, anchor_pos)
+    ic.surrouding_text_received = True
+
 def update_frame_coordinates(window_id = None):
     if window_id:
         frame.set_window_id(window_id)
@@ -435,13 +509,9 @@ def start_focus_observation(interval):
 def stop_focus_observation():
     frame.stop_focus_observation()
 
-########################################################################
-# Experiment
-########################################################################
-
 def list_active_engines():
-    print '(ibus-log "active engines: %s")'% \
-        ' '.join('%s'%i.name for i in bus.list_active_engines())
+    print "(ibus-list-active-engines-cb '(%s))"% \
+        ' '.join('"%s"'%i.name for i in bus.list_active_engines())
 
 ########################################################################
 # Main loop
@@ -458,6 +528,7 @@ class IBusModeMainLoop(glib.MainLoop):
         exit()
 
     def __start_cb(self):
+        print '(setq ibus-version "%s")'%ibus.get_version()
         print '(setq started t)'
         print 'Agent successfully started for display "%s"'% \
             display.get_display_name()
