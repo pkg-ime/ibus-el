@@ -1,3 +1,9 @@
+ibus-el (0.3.0-2) unstable; urgency=low
+
+  * Fix "README.Debian does not make sense" (Closes: #648596)
+
+ -- Asias He <asias.hejun@gmail.com>  Sun, 05 Feb 2012 10:57:29 +0000
+
 ibus-el (0.3.0-1) unstable; urgency=low
 
   * New release 
